@@ -160,7 +160,7 @@ int main(void)
 	  //display all digits
 	  for (int i = 0; i < 8; i++)
 	      {
-	        Seg7_Display(i, seg_values[i]);
+	        Seven_Segment(seg_values[i]);
 	      }
 
 	  HAL_Delay(100);
