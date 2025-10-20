@@ -68,8 +68,12 @@ void Seven_Segment(unsigned int HexValue);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-/* Character set, defined values to turn on appropriate segments to display HEX characters */
-char _7SEG[] = {};
+/* which 7-seg digit is selected(0-7) */
+uint8_t current_digit = 0;
+/* stored values for each 7-seg digit */
+uint8_t seg_values[8] = {0};
+/* button detection*/
+uint8_t last_button_state = 1;
 /* USER CODE END 0 */
 
 /**
@@ -116,8 +120,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  /* part 4*/
+	  /* part 4
 	  /* the following section takes input from switch 15:12 and displays on the seven segment display when pc11 is pushed and holds the value until the next push */
+	  /*
 	  //read from sw[15:12]
 	  uint8_t switch_value = (GPIOC -> IDR >> 12) & 0x0F;
 
@@ -129,9 +134,36 @@ int main(void)
 
 	  //when button pressed show hex digit on 7-seg display 0
 	  if (button_pressed) {
-		  Seven_Segment_Digit(0, switch_value);
+		  Seven_Segment(switch_value);
 	  }
+	  HAL_Delay(10);*/
 
+	  //part 5 displaying a character on each 7 display
+	  // check for button press
+	  uint8_t button_state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10);
+	  // Detect falling edge (button pressed once)
+	  if (last_button_state == 1 && button_state == 0) {
+		  current_digit = (current_digit + 1) % 8; // cycle through 8 digits
+		  }
+	  last_button_state = button_state;
+	  // read switch value
+	  uint8_t sw_value = (GPIOE->IDR >> 12) & 0xF;
+	  //write to led
+	  uint16_t led_value = (sw_value << 12);
+	  GPIOD->ODR = (GPIOD->ODR & 0x0FFF) | led_value;
+	  // if button is pressed, assign switch value
+	  if (button_state == 0)
+	      {
+	        seg_values[current_digit] = sw_value;
+	      }
+
+	  //display all digits
+	  for (int i = 0; i < 8; i++)
+	      {
+	        Seg7_Display(i, seg_values[i]);
+	      }
+
+	  HAL_Delay(100);
 	  /*demo test */
 	 /* int i;
 	  for (i=0 ; i<8 ; i++)
@@ -384,8 +416,6 @@ void Seven_Segment_Digit (unsigned char digit, unsigned char hex_char)
 		return;
 }
 
-
-
 void Seven_Segment(unsigned int HexValue)
 {
 /******************************************************************************
@@ -402,6 +432,18 @@ Use a for loop to output HexValue to 7 segment display digits
 
 	return;
 }
+
+void LED_Output(uint16_t value) {
+	GPIOD->ODR = value;
+}
+uint8_t Read_SwitchValue(void) {
+	return (GPIOE ->IDR >>12) & 0xF; //bits 15:12
+}
+uint8_t Button_Pressed(void) {
+	return (HAL_GPIO_ReadPin(GPIO, GPIO_PIN_10) == GPIO_PIN_RESET);
+}
+
+
 /* USER CODE END 4 */
 
 /**
