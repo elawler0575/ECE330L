@@ -55,9 +55,9 @@ TIM_HandleTypeDef htim7;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_I2C1_Init(void);
-static void MX_I2S3_Init(void);
-static void MX_SPI1_Init(void);
+//static void MX_I2C1_Init(void);
+//static void MX_I2S3_Init(void);
+//static void MX_SPI1_Init(void);
 static void MX_TIM7_Init(void);
 void MX_USB_HOST_Process(void);
 
@@ -108,13 +108,31 @@ int main(void)
   GPIOE->MODER |= 0x55555555; // Port E mode register - make E8 to E15 outputs
   GPIOC->MODER |= 0x0; // Port C mode register - all inputs
   GPIOE->ODR = 0xFFFF; // Set all Port E pins high
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  //demo/test
+	  /* part 4*/
+	  /* the following section takes input from switch 15:12 and displays on the seven segment display when pc11 is pushed and holds the value until the next push */
+	  //read from sw[15:12]
+	  uint8_t switch_value = (GPIOC -> IDR >> 12) & 0x0F;
+
+	  //read push button pc11
+	  uint8_t button_pressed = ((GPIOC -> IDR & GPIO_PIN_11) ==0);
+
+	  //show value on led
+	  GPIOD->ODR = (GPIOD->ODR & 0x0FFF) | (switch_value << 12);
+
+	  //when button pressed show hex digit on 7-seg display 0
+	  if (button_pressed) {
+		  Seven_Segment_Digit(0, switch_value);
+	  }
+
+	  /*demo test */
 	 /* int i;
 	  for (i=0 ; i<8 ; i++)
 	  {
@@ -126,22 +144,12 @@ int main(void)
 
 	  HAL_Delay(5000); // delay for 5000 milliseconds
 */
-	  //part 4 - read switches to generate a hex value and puts a character on the display
 
-	  // read switch
-	  uint16_t sw = (GPIOC->IDR >> 12) & 0x000f;
-	  uint8_t pc_11 = GPIOD->IDR >> 11 & 0x0001;
-	  //show value on led
-	  GPIOD->ODR = (GPIOD->ODR & 0x0fff) | (sw << 12);
-	  uint16_t value_on_switches = (GPIOC->IDR >> 12)| sw << 12;
-	  //this isnt working
-	  while(pc_11) {
-	  Seven_Segment_Digit(0, value_on_switches);
 	  }
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
-}
+
 
 /**
   * @brief System Clock Configuration
@@ -317,6 +325,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(MEMS_INT2_GPIO_Port, &GPIO_InitStruct);
+
+  /* added configure PC11 as pushbutton with internal pull up */
+  GPIO_InitStruct.Pin = GPIO_PIN_11;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
 }
 
