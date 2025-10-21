@@ -104,7 +104,7 @@ int main(void)
 
   /*** Configure ADC1 ***/
   /**** TODO: ENABLE ADC1 RCC CLOCK  ****/  // Turn on ADC1 clock by forcing bit 8 of the RCC APB2ENR register to 1 while keeping other bits unchanged
-  RCC->AHB2ENR |=(1<<8);
+  RCC->APB2ENR |=(1<<8);
   /**** TODO: TURN ON ADC1 ****/  // Turn on ADC1 by forcing bit 0 OF CR2 to 1 while keeping other bits unchanged
   ADC1->CR2 |=(1<<0);
 
