@@ -147,7 +147,16 @@ int main(void)
 		  HAL_Delay(50);
 		  if (HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_10) == GPIO_PIN_RESET)
 		  current_digit = (current_digit + 1) % 8; // cycle through 8 digits
+		  GPIOD->ODR &= ~0x00ff; // clear lower 8 bits
+		  // right most leds track position
+		  if(current_digit != 0) {
+		  GPIOD->ODR |= (0x0100 >> current_digit);
 		  }
+		  else {
+			  GPIOD->ODR = 0x0001;
+		  }
+
+	  }
 	  last_button_state = button_state;
 
 	  // read switch value
@@ -167,6 +176,7 @@ int main(void)
 	  for (int i = 0; i < 8; i++)
 	      {
 	        Seven_Segment_Digit(i-2,seg_values[i]);
+
 	      }
 
 	  HAL_Delay(100);
