@@ -121,8 +121,8 @@ int main(void)
   while (1)
   {
 	  /* part 4
-	  /* the following section takes input from switch 15:12 and displays on the seven segment display when pc11 is pushed and holds the value until the next push */
-	  /*
+	  the following section takes input from switch 15:12 and displays on the seven segment display when pc11 is pushed and holds the value until the next push
+	  *//*
 	  //read from sw[15:12]
 	  uint8_t switch_value = (GPIOC -> IDR >> 12) & 0x0F;
 
@@ -139,18 +139,24 @@ int main(void)
 	  HAL_Delay(10);*/
 
 	  //part 5 displaying a character on each 7 display
-	  // check for button press
+	  // read button
 	  uint8_t button_state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10);
+
 	  // Detect falling edge (button pressed once)
 	  if (last_button_state == 1 && button_state == 0) {
+		  HAL_Delay(50);
+		  if (HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_10) == GPIO_PIN_RESET)
 		  current_digit = (current_digit + 1) % 8; // cycle through 8 digits
 		  }
 	  last_button_state = button_state;
+
 	  // read switch value
-	  uint8_t sw_value = (GPIOE->IDR >> 12) & 0xF;
+	  uint8_t sw_value = (GPIOC->IDR >> 12) & 0x0F;
+
 	  //write to led
 	  uint16_t led_value = (sw_value << 12);
 	  GPIOD->ODR = (GPIOD->ODR & 0x0FFF) | led_value;
+
 	  // if button is pressed, assign switch value
 	  if (button_state == 0)
 	      {
@@ -160,12 +166,12 @@ int main(void)
 	  //display all digits
 	  for (int i = 0; i < 8; i++)
 	      {
-	        Seven_Segment(seg_values[i]);
+	        Seven_Segment_Digit(i-2,seg_values[i]);
 	      }
 
 	  HAL_Delay(100);
-	  /*demo test */
-	 /* int i;
+	  /*demo test
+	  int i;
 	  for (i=0 ; i<8 ; i++)
 	  {
 		  Seven_Segment_Digit(i,i);
@@ -174,9 +180,9 @@ int main(void)
 
 	 Seven_Segment(0x5ADFACE5);
 
-	  HAL_Delay(5000); // delay for 5000 milliseconds
-*/
+	  HAL_Delay(500); // delay for 500 milliseconds
 
+*/
 	  }
     /* USER CODE BEGIN 3 */
   }
@@ -395,20 +401,22 @@ void Seven_Segment_Digit (unsigned char digit, unsigned char hex_char)
 	};
 
 
-	unsigned int pattern = seg_pattern[hex_char & 0x0f];
+	//unsigned int pattern = seg_pattern[hex_char & 0x0f];
 
 	// Set selected digit to 0, all others high, and output 7 segment pattern
 	// Mask out invalid inputs
 	    digit &= 0x07;
 	    hex_char &= 0x0F;
 
-	    //put pattern to port
-	    GPIOE->ODR = pattern;
+	    //get pattern
+	    unsigned int pattern = seg_pattern[hex_char & 0x0f];
+	    //GPIOE->ODR = pattern;
+
+	    // map digit 0-7 to PE15 - PE8
+	    uint16_t select_mask = (uint16_t)1<< (15 - digit);
 
 	    // Activate the desired digit on Port E bits [15:8].
-
-	    uint16_t select_mask = 1 << (digit + 8);
-	    GPIOE->ODR = select_mask;
+	    GPIOE->ODR = (pattern & 0x00ff) |select_mask;
 
 	    // delay
 	    HAL_Delay(1);
@@ -427,23 +435,11 @@ Use a for loop to output HexValue to 7 segment display digits
 	{
 		// call Seven segment digit function with the correct hex characters
 		// using bit shifting and masking
-	   Seven_Segment_Digit(digit,(HexValue >> (4 * digit)) & 0x0f);
+	   Seven_Segment_Digit((7-digit+1),(HexValue >> (4 * digit)) & 0x0f);
 	}
 
 	return;
 }
-
-void LED_Output(uint16_t value) {
-	GPIOD->ODR = value;
-}
-uint8_t Read_SwitchValue(void) {
-	return (GPIOE ->IDR >>12) & 0xF; //bits 15:12
-}
-uint8_t Button_Pressed(void) {
-	return (HAL_GPIO_ReadPin(GPIO, GPIO_PIN_10) == GPIO_PIN_RESET);
-}
-
-
 /* USER CODE END 4 */
 
 /**
