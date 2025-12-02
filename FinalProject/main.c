@@ -28,12 +28,14 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+typedef enum { menuState, playState} GameState;
+//GameState = menuState;
 
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define NUM_DIGITS 8
 
 
 /* USER CODE END PD */
@@ -93,6 +95,7 @@ char Animate_On = 0;
 char Message_Length = 0;
 char *Message_Pointer;
 char *Save_Pointer;
+char MessageButtonLength = 0;
 int Delay_msec = 0;
 int Delay_counter = 0;
 
@@ -106,10 +109,11 @@ char Message[] =
 /*GAME OVER               SCORE: 120383293819*/
 //I THINK TO TURN THE INTEGER SCORE TO A CHARACTER, U CALL SEVEN SEGMENT DISPLAY FOR THIS MESSAGE AND THEN APPEND THE CHAR VERSION COVERED OF THE SCORE
 char GAMEOVER[] =
-		{SPACE,SPACE,SPACE,SPACE,SPACE,SPACE,SPACE,SPACE,SPACE,SPACE,
+		{SPACE,SPACE,SPACE,SPACE,SPACE,
 		CHAR_G,CHAR_A,CHAR_M,CHAR_E,SPACE,CHAR_O,CHAR_V,CHAR_E,CHAR_R,SPACE,CHAR_T,CHAR_O, SPACE, SPACE,SPACE,SPACE,SPACE,SPACE,SPACE,
 		CHAR_S,CHAR_C,CHAR_O,CHAR_R,CHAR_E }; //APPEND THE SCORE TO THIS MESSAGE
 
+unsigned char Message_Button[] = {SPACE,SPACE,SPACE,CHAR_P,CHAR_R,CHAR_E,CHAR_S,CHAR_S,CHAR_E,CHAR_D,SPACE,SPACE,SPACE};
 
 /* Declare array for Song */
 Music Song[100];
@@ -156,13 +160,19 @@ int main(void)
   GPIOD->MODER = 0x55555555; // set all Port D pins to outputs
   GPIOA->MODER |= 0x000000FF; // Port A mode register - make A0 to A3 analog pins
   GPIOE->MODER |= 0x55555555; // Port E mode register - make E8 to E15 outputs
-  GPIOC->MODER |= 0x0; // Port C mode register - all inputs
+  //GPIOC->MODER &= ~(3 << (10 * 2));// Port C mode register - all inputs
   GPIOE->ODR = 0xFFFF; // Set all Port E pins high
 
   /*** Configure ADC1 ***/
   RCC->APB2ENR |= 1<<8;  // Turn on ADC1 clock by forcing bit 8 to 1 while keeping other bits unchanged
   ADC1->SMPR2 |= 1; // 15 clock cycles per sample
   ADC1->CR2 |= 1;        // Turn on ADC1 by forcing bit 0 to 1 while keeping other bits unchanged
+
+  //setting up pc10
+  RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
+  GPIOC->MODER &= ~(3U << (10 * 2));
+  GPIOC->PUPDR &= ~(3U << (10 * 2));
+  GPIOC->PUPDR |= (1U << (10 *2));
 
   /*****************************************************************************************************
   These commands are handled as part of the MX_TIM7_Init() function and don't need to be enabled
@@ -181,572 +191,753 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  /* Jeopardy Song */
-  Song[0].note = A4;
-  Song[0].size = quarter;
-  Song[0].tempo = 1400;
-  Song[0].space = 10;
-  Song[0].end = 0;
-
-  Song[1].note = D5;
-  Song[1].size = quarter;
-  Song[1].tempo = 1400;
-  Song[1].space = 10;
-  Song[1].end = 0;
-
-  Song[2].note = A4;
-  Song[2].size = quarter;
-  Song[2].tempo = 1400;
-  Song[2].space = 10;
-  Song[2].end = 0;
-
-  Song[3].note = D4;
-  Song[3].size = quarter;
-  Song[3].tempo = 1400;
-  Song[3].space = 10;
-  Song[3].end = 0;
-
-  Song[4].note = A4;
-  Song[4].size = quarter;
-  Song[4].tempo = 1400;
-  Song[4].space = 10;
-  Song[4].end = 0;
-
-  Song[5].note = D5;
-  Song[5].size = quarter;
-  Song[5].tempo = 1400;
-  Song[5].space = 10;
-  Song[5].end = 0;
-
-  Song[6].note = A4;
-  Song[6].size = quarter;
-  Song[6].tempo = 1400;
-  Song[6].space = 10;
-  Song[6].end = 0;
-
-  Song[7].note = rest;
-  Song[7].size = quarter;
-  Song[7].tempo = 1400;
-  Song[7].space = 10;
-  Song[7].end = 0;
-
-  Song[8].note = A4;
-  Song[8].size = quarter;
-  Song[8].tempo = 1400;
-  Song[8].space = 10;
-  Song[8].end = 0;
-
-  Song[9].note = D5;
-  Song[9].size = quarter;
-  Song[9].tempo = 1400;
-  Song[9].space = 10;
-  Song[9].end = 0;
-
-  Song[10].note = A4;
-  Song[10].size = quarter;
-  Song[10].tempo = 1400;
-  Song[10].space = 10;
-  Song[10].end = 0;
-
-  Song[11].note = D5;
-  Song[11].size = quarter;
-  Song[11].tempo = 1400;
-  Song[11].space = 10;
-  Song[11].end = 0;
-
-  Song[12].note = Fs5_Gb5;
-  Song[12].size = quarter;
-  Song[12].tempo = 1400;
-  Song[12].space = 100;
-  Song[12].end = 0;
-
-  Song[13].note = rest;
-  Song[13].size = _8th;
-  Song[13].tempo = 1400;
-  Song[13].space = 10;
-  Song[13].end = 0;
-
-  Song[14].note = E5;
-  Song[14].size = _8th;
-  Song[14].tempo = 1400;
-  Song[14].space = 10;
-  Song[14].end = 0;
-
-  Song[15].note = D5;
-  Song[15].size = _8th;
-  Song[15].tempo = 1400;
-  Song[15].space = 10;
-  Song[15].end = 0;
-
-  Song[16].note = Cs5_Db5;
-  Song[16].size = _8th;
-  Song[16].tempo = 1400;
-  Song[16].space = 10;
-  Song[16].end = 0;
-
-  Song[17].note = B4;
-  Song[17].size = _8th;
-  Song[17].tempo = 1400;
-  Song[17].space = 10;
-  Song[17].end = 0;
-
-  Song[18].note = As4_Bb4;
-  Song[18].size = _8th;
-  Song[18].tempo = 1400;
-  Song[18].space = 10;
-  Song[18].end = 0;
-
-  Song[19].note = A4;
-  Song[19].size = quarter;
-  Song[19].tempo = 1400;
-  Song[19].space = 10;
-  Song[19].end = 0;
-
-  Song[20].note = D5;
-  Song[20].size = quarter;
-  Song[20].tempo = 1400;
-  Song[20].space = 10;
-  Song[20].end = 0;
-
-  Song[21].note = A4;
-  Song[21].size = quarter;
-  Song[21].tempo = 1400;
-  Song[21].space = 10;
-  Song[21].end = 0;
-
-  Song[22].note = Fs4_Gb4;
-  Song[22].size = _8th;
-  Song[22].tempo = 1400;
-  Song[22].space = 10;
-  Song[22].end = 0;
-
-  Song[23].note = G4;
-  Song[23].size = _8th;
-  Song[23].tempo = 1400;
-  Song[23].space = 10;
-  Song[23].end = 0;
-
-  Song[24].note = A4;
-  Song[24].size = quarter;
-  Song[24].tempo = 1400;
-  Song[24].space = 10;
-  Song[24].end = 0;
-
-  Song[25].note = D5;
-  Song[25].size = quarter;
-  Song[25].tempo = 1400;
-  Song[25].space = 10;
-  Song[25].end = 0;
-
-  Song[26].note = A4;
-  Song[26].size = quarter;
-  Song[26].tempo = 1400;
-  Song[26].space = 10;
-  Song[26].end = 0;
-
-  Song[27].note = rest;
-  Song[27].size = quarter;
-  Song[27].tempo = 1400;
-  Song[27].space = 10;
-  Song[27].end = 0;
-
-  Song[28].note = D5;
-  Song[28].size = quarter;
-  Song[28].tempo = 1400;
-  Song[28].space = 100;
-  Song[28].end = 0;
-
-  Song[29].note = rest;
-  Song[29].size = _8th;
-  Song[29].tempo = 1400;
-  Song[29].space = 10;
-  Song[29].end = 0;
-
-  Song[30].note = B4;
-  Song[30].size = _8th;
-  Song[30].tempo = 1400;
-  Song[30].space = 10;
-  Song[30].end = 0;
-
-  Song[31].note = A4;
-  Song[31].size = quarter;
-  Song[31].tempo = 1400;
-  Song[31].space = 100;
-  Song[31].end = 0;
-
-  Song[32].note = G4;
-  Song[32].size = quarter;
-  Song[32].tempo = 1400;
-  Song[32].space = 100;
-  Song[32].end = 0;
-
-  Song[33].note = Fs4_Gb4;
-  Song[33].size = quarter;
-  Song[33].tempo = 1400;
-  Song[33].space = 100;
-  Song[33].end = 0;
-
-  Song[34].note = E4;
-  Song[34].size = quarter;
-  Song[34].tempo = 1400;
-  Song[34].space = 100;
-  Song[34].end = 0;
-
-  Song[35].note = D4;
-  Song[35].size = quarter;
-  Song[35].tempo = 1400;
-  Song[35].space = 100;
-  Song[35].end = 0;
-
-  Song[36].note = rest;
-  Song[36].size = quarter;
-  Song[36].tempo = 1400;
-  Song[36].space = 10;
-  Song[36].end = 0;
-
-  Song[37].note = C5;
-  Song[37].size = quarter;
-  Song[37].tempo = 1400;
-  Song[37].space = 10;
-  Song[37].end = 0;
-
-  Song[38].note = F5;
-  Song[38].size = quarter;
-  Song[38].tempo = 1400;
-  Song[38].space = 10;
-  Song[38].end = 0;
-
-  Song[39].note = C5;
-  Song[39].size = quarter;
-  Song[39].tempo = 1400;
-  Song[39].space = 10;
-  Song[39].end = 0;
-
-  Song[40].note = F4;
-  Song[40].size = _8th;
-  Song[40].tempo = 1400;
-  Song[40].space = 10;
-  Song[40].end = 0;
-
-  Song[41].note = F4;
-  Song[41].size = _8th;
-  Song[41].tempo = 1400;
-  Song[41].space = 10;
-  Song[41].end = 0;
-
-  Song[42].note = C5;
-  Song[42].size = quarter;
-  Song[42].tempo = 1400;
-  Song[42].space = 10;
-  Song[42].end = 0;
-
-  Song[43].note = F5;
-  Song[43].size = quarter;
-  Song[43].tempo = 1400;
-  Song[43].space = 10;
-  Song[43].end = 0;
-
-  Song[44].note = C5;
-  Song[44].size = quarter;
-  Song[44].tempo = 1400;
-  Song[44].space = 10;
-  Song[44].end = 0;
-
-  Song[45].note = rest;
-  Song[45].size = quarter;
-  Song[45].tempo = 1400;
-  Song[45].space = 10;
-  Song[45].end = 0;
-
-  Song[46].note = C5;
-  Song[46].size = quarter;
-  Song[46].tempo = 1400;
-  Song[46].space = 10;
-  Song[46].end = 0;
-
-  Song[47].note = F5;
-  Song[47].size = quarter;
-  Song[47].tempo = 1400;
-  Song[47].space = 10;
-  Song[47].end = 0;
-
-  Song[48].note = C5;
-  Song[48].size = quarter;
-  Song[48].tempo = 1400;
-  Song[48].space = 10;
-  Song[48].end = 0;
-
-  Song[49].note = F5;
-  Song[49].size = quarter;
-  Song[49].tempo = 1400;
-  Song[49].space = 10;
-  Song[49].end = 0;
-
-  Song[50].note = A5;
-  Song[50].size = quarter;
-  Song[50].tempo = 1400;
-  Song[50].space = 0;
-  Song[50].end = 0;
-
-  Song[51].note = A5;
-  Song[51].size = _8th;
-  Song[51].tempo = 1400;
-  Song[51].space = 10;
-  Song[51].end = 0;
-
-  Song[52].note = G5;
-  Song[52].size = _8th;
-  Song[52].tempo = 1400;
-  Song[52].space = 10;
-  Song[52].end = 0;
-
-  Song[53].note = F5;
-  Song[53].size = _8th;
-  Song[53].tempo = 1400;
-  Song[53].space = 10;
-  Song[53].end = 0;
-
-  Song[54].note = E5;
-  Song[54].size = _8th;
-  Song[54].tempo = 1400;
-  Song[54].space = 10;
-  Song[54].end = 0;
-
-  Song[55].note = D5;
-  Song[55].size = _8th;
-  Song[55].tempo = 1400;
-  Song[55].space = 10;
-  Song[55].end = 0;
-
-  Song[56].note = Cs5_Db5;
-  Song[56].size = _8th;
-  Song[56].tempo = 1400;
-  Song[56].space = 10;
-  Song[56].end = 0;
-
-  Song[57].note = C5;
-  Song[57].size = quarter;
-  Song[57].tempo = 1400;
-  Song[57].space = 10;
-  Song[57].end = 0;
-
-  Song[58].note = F5;
-  Song[58].size = quarter;
-  Song[58].tempo = 1400;
-  Song[58].space = 10;
-  Song[58].end = 0;
-
-  Song[59].note = C5;
-  Song[59].size = quarter;
-  Song[59].tempo = 1400;
-  Song[59].space = 10;
-  Song[59].end = 0;
-
-  Song[60].note = A4;
-  Song[60].size = _8th;
-  Song[60].tempo = 1400;
-  Song[60].space = 10;
-  Song[60].end = 0;
-
-  Song[61].note = As4_Bb4;
-  Song[61].size = _8th;
-  Song[61].tempo = 1400;
-  Song[61].space = 10;
-  Song[61].end = 0;
-
-  Song[62].note = C5;
-  Song[62].size = quarter;
-  Song[62].tempo = 1400;
-  Song[62].space = 10;
-  Song[62].end = 0;
-
-  Song[63].note = F5;
-  Song[63].size = quarter;
-  Song[63].tempo = 1400;
-  Song[63].space = 10;
-  Song[63].end = 0;
-
-  Song[64].note = C5;
-  Song[64].size = quarter;
-  Song[64].tempo = 1400;
-  Song[64].space = 10;
-  Song[64].end = 0;
-
-  Song[65].note = rest;
-  Song[65].size = _16th;
-  Song[65].tempo = 1400;
-  Song[65].space = 10;
-  Song[65].end = 0;
-
-  Song[66].note = C5;
-  Song[66].size = _16th;
-  Song[66].tempo = 1400;
-  Song[66].space = 10;
-  Song[66].end = 0;
-
-  Song[67].note = D5;
-  Song[67].size = _16th;
-  Song[67].tempo = 1400;
-  Song[67].space = 10;
-  Song[67].end = 0;
-
-  Song[68].note = E5;
-  Song[68].size = _16th;
-  Song[68].tempo = 1400;
-  Song[68].space = 10;
-  Song[68].end = 0;
-
-  Song[69].note = F5;
-  Song[69].size = quarter;
-  Song[69].tempo = 1400;
-  Song[69].space = 100;
-  Song[69].end = 0;
-
-  Song[70].note = rest;
-  Song[70].size = _8th;
-  Song[70].tempo = 1400;
-  Song[70].space = 10;
-  Song[70].end = 0;
-
-  Song[71].note = D5;
-  Song[71].size = _8th;
-  Song[71].tempo = 1400;
-  Song[71].space = 10;
-  Song[71].end = 0;
-
-  Song[72].note = C5;
-  Song[72].size = quarter;
-  Song[72].tempo = 1400;
-  Song[72].space = 100;
-  Song[72].end = 0;
-
-  Song[73].note = As4_Bb4;
-  Song[73].size = quarter;
-  Song[73].tempo = 1400;
-  Song[73].space = 100;
-  Song[73].end = 0;
-
-  Song[74].note = A4;
-  Song[74].size = quarter;
-  Song[74].tempo = 1400;
-  Song[74].space = 100;
-  Song[74].end = 0;
-
-  Song[75].note = rest;
-  Song[75].size = quarter;
-  Song[75].tempo = 1400;
-  Song[75].space = 100;
-  Song[75].end = 0;
-
-  Song[76].note = G4;
-  Song[76].size = quarter;
-  Song[76].tempo = 1400;
-  Song[76].space = 100;
-  Song[76].end = 0;
-
-  Song[77].note = rest;
-  Song[77].size = quarter;
-  Song[77].tempo = 1400;
-  Song[77].space = 100;
-  Song[77].end = 0;
-
-  Song[78].note = F4;
-  Song[78].size = quarter;
-  Song[78].tempo = 1400;
-  Song[78].space = 100;
-  Song[78].end = 0;
-
-  Song[99].note = rest;
-  Song[99].size = quarter;
-  Song[99].tempo = 1400;
-  Song[99].space = 10;
-  Song[99].end = 1;
-
-
-
-  Save_Note = Song[0].note;  // Needed for vibrato effect
+  /* Don't Stop Believing Song */
+
+  Song[0].note = rest;
+     Song[0].size = half;
+     Song[0].tempo = 1650;
+     Song[0].space = 10;
+     Song[0].end = 0;
+
+     Song[1].note = Gs5_Ab5;
+     Song[1].size = _8th;
+     Song[1].tempo = 1650;
+     Song[1].space = 10;
+     Song[1].end = 0;
+
+     Song[2].note = E5;
+     Song[2].size = _8th;
+     Song[2].tempo = 1650;
+     Song[2].space = 10;
+     Song[2].end = 0;
+
+     Song[3].note = Fs5_Gb5;
+     Song[3].size = _8th;
+     Song[3].tempo = 1650;
+     Song[3].space = 10;
+     Song[3].end = 0;
+
+     Song[4].note = Fs5_Gb5;
+     Song[4].size = quarter;
+     Song[4].tempo = 1650;
+     Song[4].space = 10;
+     Song[4].end = 0;
+
+     Song[5].note = Gs5_Ab5;
+     Song[5].size = quarter;
+     Song[5].tempo = 1650;
+     Song[5].space = 0;
+     Song[5].end = 0;
+
+     Song[6].note = Gs5_Ab5;
+     Song[6].size = _8th;
+     Song[6].tempo = 1650;
+     Song[6].space = 10;
+     Song[6].end = 0;
+
+     Song[7].note = rest;
+     Song[7].size = quarter;
+     Song[7].tempo = 1650;
+     Song[7].space = 0;
+     Song[7].end = 0;
+
+     Song[8].note = rest;
+     Song[8].size = half;
+     Song[8].tempo = 1650;
+     Song[8].space = 10;
+     Song[8].end = 0;
+
+     Song[9].note = E5;
+     Song[9].size = _8th;
+     Song[9].tempo = 1650;
+     Song[9].space = 10;
+     Song[9].end = 0;
+
+     Song[10].note = E5;
+     Song[10].size = _8th;
+     Song[10].tempo = 1650;
+     Song[10].space = 10;
+     Song[10].end = 0;
+
+     Song[11].note = E5;
+     Song[11].size = _8th;
+     Song[11].tempo = 1650;
+     Song[11].space = 10;
+     Song[11].end = 0;
+
+     Song[12].note = E5;
+     Song[12].size = _8th;
+     Song[12].tempo = 1650;
+     Song[12].space = 10;
+     Song[12].end = 0;
+
+     Song[13].note = B5;
+     Song[13].size = quarter;
+     Song[13].tempo = 1650;
+     Song[13].space = 10;
+     Song[13].end = 0;
+
+     Song[14].note = B5;
+     Song[14].size = _8th;
+     Song[14].tempo = 1650;
+     Song[14].space = 0;
+     Song[14].end = 0;
+
+     Song[15].note = Gs5_Ab5;
+     Song[15].size = quarter;
+     Song[15].tempo = 1650;
+     Song[15].space = 10;
+     Song[15].end = 0;
+
+     Song[16].note = Fs5_Gb5;
+     Song[16].size = _8th;
+     Song[16].tempo = 1650;
+     Song[16].space = 0;
+     Song[16].end = 0;
+
+     Song[17].note = Fs5_Gb5;
+     Song[17].size = quarter;
+     Song[17].tempo = 1650;
+     Song[17].space = 10;
+     Song[17].end = 0;
+
+     Song[18].note = rest;
+     Song[18].size = half;
+     Song[18].tempo = 1650;
+     Song[18].space = 10;
+     Song[18].end = 0;
+
+     Song[19].note = rest;
+     Song[19].size = _8th;
+     Song[19].tempo = 1650;
+     Song[19].space = 10;
+     Song[19].end = 0;
+
+     Song[20].note = B4;
+     Song[20].size = _8th;
+     Song[20].tempo = 1650;
+     Song[20].space = 10;
+     Song[20].end = 0;
+
+     Song[21].note = Gs5_Ab5;
+     Song[21].size = _8th;
+     Song[21].tempo = 1650;
+     Song[21].space = 10;
+     Song[21].end = 0;
+
+     Song[22].note = E5;
+     Song[22].size = _8th;
+     Song[22].tempo = 1650;
+     Song[22].space = 10;
+     Song[22].end = 0;
+
+     Song[23].note = Fs5_Gb5;
+     Song[23].size = _8th;
+     Song[23].tempo = 1650;
+     Song[23].space = 10;
+     Song[23].end = 0;
+
+     Song[24].note = Fs5_Gb5;
+     Song[24].size = quarter;
+     Song[24].tempo = 1650;
+     Song[24].space = 10;
+     Song[24].end = 0;
+
+     Song[25].note = Gs5_Ab5;
+     Song[25].size = quarter;
+     Song[25].tempo = 1650;
+     Song[25].space = 10;
+     Song[25].end = 0;
+
+     Song[26].note = Fs5_Gb5;
+     Song[26].size = quarter;
+     Song[26].tempo = 1650;
+     Song[26].space = 10;
+     Song[26].end = 0;
+
+     Song[27].note = E5;
+     Song[27].size = _8th;
+     Song[27].tempo = 1650;
+     Song[27].space = 10;
+     Song[27].end = 0;
+
+     Song[28].note = Fs5_Gb5;
+     Song[28].size = quarter;
+     Song[28].tempo = 1650;
+     Song[28].space = 0;
+     Song[28].end = 0;
+
+     Song[29].note = Fs5_Gb5;
+     Song[29].size = _8th;
+     Song[29].tempo = 1650;
+     Song[29].space = 10;
+     Song[29].end = 0;
+
+     Song[30].note = Gs5_Ab5;
+     Song[30].size = _8th;
+     Song[30].tempo = 1650;
+     Song[30].space = 0;
+     Song[30].end = 0;
+
+     Song[31].note = Gs5_Ab5;
+     Song[31].size = quarter;
+     Song[31].tempo = 1650;
+     Song[31].space = 10;
+     Song[31].end = 0;
+
+     Song[32].note = E5;
+     Song[32].size = quarter;
+     Song[32].tempo = 1650;
+     Song[32].space = 00;
+     Song[32].end = 0;
+
+     Song[33].note = E5;
+     Song[33].size = half;
+     Song[33].tempo = 1650;
+     Song[33].space = 100;
+     Song[33].end = 0; //end of small town girl verse
+
+     Song[34].note = rest;
+     Song[34].size = whole;
+     Song[34].tempo = 1650;
+     Song[34].space = 10;
+     Song[34].end = 0;
+
+     Song[35].note = Gs5_Ab5;
+     Song[35].size = _8th;
+     Song[35].tempo = 1650;
+     Song[35].space = 10;
+     Song[35].end = 0;
+
+     Song[36].note = E5;
+     Song[36].size = _8th;
+     Song[36].tempo = 1650;
+     Song[36].space = 10;
+     Song[36].end = 0;
+
+     Song[37].note = Fs5_Gb5;
+     Song[37].size = _8th;
+     Song[37].tempo = 1650;
+     Song[37].space = 10;
+     Song[37].end = 0;
+
+     Song[38].note = Fs5_Gb5;
+     Song[38].size = quarter;
+     Song[38].tempo = 1650;
+     Song[38].space = 10;
+     Song[38].end = 0;
+
+     Song[39].note = Gs5_Ab5;
+     Song[39].size = quarter;
+     Song[39].tempo = 1650;
+     Song[39].space = 0;
+     Song[39].end = 0;
+
+     Song[40].note = Gs5_Ab5;
+     Song[40].size = _8th;
+     Song[40].tempo = 1650;
+     Song[40].space = 10;
+     Song[40].end = 0;
+
+     Song[41].note = rest;
+     Song[41].size = quarter;
+     Song[41].tempo = 1650;
+     Song[41].space = 0;
+     Song[41].end = 0;
+
+     Song[42].note = rest;
+     Song[42].size = half;
+     Song[42].tempo = 1650;
+     Song[42].space = 10;
+     Song[42].end = 0;
+
+     Song[43].note = E5;
+     Song[43].size = _8th;
+     Song[43].tempo = 1650;
+     Song[43].space = 10;
+     Song[43].end = 0;
+
+     Song[44].note = E5;
+     Song[44].size = _8th;
+     Song[44].tempo = 1650;
+     Song[44].space = 44;
+     Song[44].end = 0;
+
+     Song[45].note = E5;
+     Song[45].size = _8th;
+     Song[45].tempo = 1650;
+     Song[45].space = 10;
+     Song[45].end = 0;
+
+     Song[46].note = E5;
+     Song[46].size = _8th;
+     Song[46].tempo = 1650;
+     Song[46].space = 10;
+     Song[46].end = 0;
+
+     Song[47].note = B5;
+     Song[47].size = quarter;
+     Song[47].tempo = 1650;
+     Song[47].space = 10;
+     Song[47].end = 0;
+
+     Song[48].note = B5;
+     Song[48].size = _8th;
+     Song[48].tempo = 1650;
+     Song[48].space = 0;
+     Song[48].end = 0;
+
+     Song[49].note = Gs5_Ab5;
+     Song[49].size = quarter;
+     Song[49].tempo = 1650;
+     Song[49].space = 10;
+     Song[49].end = 0;
+
+     Song[50].note = Fs5_Gb5;
+     Song[50].size = _8th;
+     Song[50].tempo = 1650;
+     Song[50].space = 0;
+     Song[50].end = 0;
+
+     Song[51].note = Fs5_Gb5;
+     Song[51].size = quarter;
+     Song[51].tempo = 1650;
+     Song[51].space = 10;
+     Song[51].end = 0;
+
+     Song[52].note = rest;
+     Song[52].size = half;
+     Song[52].tempo = 1650;
+     Song[52].space = 10;
+     Song[52].end = 0;
+
+     Song[53].note = rest;
+     Song[53].size = _8th;
+     Song[53].tempo = 1650;
+     Song[53].space = 10;
+     Song[53].end = 0;
+
+     Song[54].note = B4;
+     Song[54].size = _8th;
+     Song[54].tempo = 1650;
+     Song[54].space = 10;
+     Song[54].end = 0;
+
+     Song[55].note = Gs5_Ab5;
+     Song[55].size = _8th;
+     Song[55].tempo = 1650;
+     Song[55].space = 10;
+     Song[55].end = 0;
+
+     Song[56].note = E5;
+     Song[56].size = _8th;
+     Song[56].tempo = 1650;
+     Song[56].space = 10;
+     Song[56].end = 0;
+
+     Song[57].note = Fs5_Gb5;
+     Song[57].size = _8th;
+     Song[57].tempo = 1650;
+     Song[57].space = 10;
+     Song[57].end = 0;
+
+     Song[58].note = Fs5_Gb5;
+     Song[58].size = quarter;
+     Song[58].tempo = 1650;
+     Song[58].space = 10;
+     Song[58].end = 0;
+
+     Song[59].note = Gs5_Ab5;
+     Song[59].size = quarter;
+     Song[59].tempo = 1650;
+     Song[59].space = 10;
+     Song[59].end = 0;
+
+     Song[60].note = Fs5_Gb5;
+     Song[60].size = quarter;
+     Song[60].tempo = 1650;
+     Song[60].space = 10;
+     Song[60].end = 0;
+
+     Song[61].note = E5;
+     Song[61].size = _8th;
+     Song[61].tempo = 1650;
+     Song[61].space = 10;
+     Song[61].end = 0;
+
+     Song[62].note = Fs5_Gb5;
+     Song[62].size = quarter;
+     Song[62].tempo = 1650;
+     Song[62].space = 0;
+     Song[62].end = 0;
+
+     Song[63].note = Fs5_Gb5;
+     Song[63].size = _8th;
+     Song[63].tempo = 1650;
+     Song[63].space = 10;
+     Song[63].end = 0;
+
+     Song[64].note = Gs5_Ab5;
+     Song[64].size = _8th;
+     Song[64].tempo = 1650;
+     Song[64].space = 0;
+     Song[64].end = 0;
+
+     Song[65].note = Gs5_Ab5;
+     Song[65].size = quarter;
+     Song[65].tempo = 1650;
+     Song[65].space = 10;
+     Song[65].end = 0;
+
+     Song[66].note = E5;
+     Song[66].size = quarter;
+     Song[66].tempo = 1650;
+     Song[66].space = 00;
+     Song[66].end = 0;
+
+     Song[67].note = E5;
+     Song[67].size = half;
+     Song[67].tempo = 1650;
+     Song[67].space = 100;
+     Song[67].end = 0;//city boy verse
+
+     Song[68].note = rest;
+     Song[68].size = whole;
+     Song[68].tempo = 1650;
+     Song[68].space = 10;
+     Song[68].end = 0;
+
+     Song[69].note = B4;
+     Song[69].size = _8th;
+     Song[69].tempo = 1650;
+     Song[69].space = 10;
+     Song[69].end = 0;
+
+     Song[70].note = Fs5_Gb5;
+     Song[70].size = _8th;
+     Song[70].tempo = 1650;
+     Song[70].space = 10;
+     Song[70].end = 0;
+
+     Song[71].note = Gs5_Ab5;
+     Song[71].size = _8th;
+     Song[71].tempo = 1650;
+     Song[71].space = 10;
+     Song[71].end = 0;
+
+     Song[72].note = E5;
+     Song[72].size = _8th;
+     Song[72].tempo = 1650;
+     Song[72].space = 10;
+     Song[72].end = 0;
+
+     Song[73].note = Fs5_Gb5;
+     Song[73].size = _8th;
+     Song[73].tempo = 1650;
+     Song[73].space = 10;
+     Song[73].end = 0;
+
+     Song[74].note = Fs5_Gb5;
+     Song[74].size = quarter;
+     Song[74].tempo = 1650;
+     Song[74].space = 10;
+     Song[74].end = 0;
+
+     Song[75].note = Gs5_Ab5;
+     Song[75].size = quarter;
+     Song[75].tempo = 1650;
+     Song[75].space = 0;
+     Song[75].end = 0;
+
+     Song[76].note = Gs5_Ab5;
+     Song[76].size = _8th;
+     Song[76].tempo = 1650;
+     Song[76].space = 10;
+     Song[76].end = 0;
+
+     Song[77].note = rest;
+     Song[77].size = quarter;
+     Song[77].tempo = 1650;
+     Song[77].space = 0;
+     Song[77].end = 0;
+
+     Song[78].note = rest;
+     Song[78].size = half;
+     Song[78].tempo = 1650;
+     Song[78].space = 10;
+     Song[78].end = 0;
+
+     Song[79].note = Cs4_Db4;
+     Song[79].size = _8th;
+     Song[79].tempo = 1650;
+     Song[79].space = 10;
+     Song[79].end = 0;
+
+     Song[80].note = E5;
+     Song[80].size = _8th;
+     Song[80].tempo = 1650;
+     Song[80].space = 10;
+     Song[80].end = 0;
+
+     Song[81].note = E5;
+     Song[81].size = _8th;
+     Song[81].tempo = 1650;
+     Song[81].space = 10;
+     Song[81].end = 0;
+
+     Song[82].note = E5;
+     Song[82].size = _8th;
+     Song[82].tempo = 1650;
+     Song[82].space = 10;
+     Song[82].end = 0;
+
+     Song[83].note = E5;
+     Song[83].size = _8th;
+     Song[83].tempo = 1650;
+     Song[83].space = 10;
+     Song[83].end = 0;
+
+     Song[84].note = B5;
+     Song[84].size = quarter;
+     Song[84].tempo = 1650;
+     Song[84].space = 10;
+     Song[84].end = 0;
+
+     Song[85].note = B5;
+     Song[85].size = _8th;
+     Song[85].tempo = 1650;
+     Song[85].space = 0;
+     Song[85].end = 0;
+
+          Song[86].note = Gs5_Ab5;
+          Song[86].size = quarter;
+          Song[86].tempo = 1650;
+          Song[86].space = 10;
+          Song[86].end = 0;
+
+          Song[87].note = Fs5_Gb5;
+          Song[87].size = _8th;
+          Song[87].tempo = 1650;
+          Song[87].space = 0;
+          Song[87].end = 0;
+
+          Song[88].note = Fs5_Gb5;
+          Song[88].size = quarter;
+          Song[88].tempo = 1650;
+          Song[88].space = 10;
+          Song[88].end = 0;
+
+          Song[89].note = rest;
+          Song[89].size = quarter;
+          Song[89].tempo = 1650;
+          Song[89].space = 10;
+          Song[89].end = 0;
+
+          Song[90].note = Gs5_Ab5;
+          Song[90].size = _8th;
+          Song[90].tempo = 1650;
+          Song[90].space = 10;
+          Song[90].end = 0;
+
+          Song[91].note = E5;
+          Song[91].size = _8th;
+          Song[91].tempo = 1650;
+          Song[91].space = 10;
+          Song[91].end = 0;
+
+          Song[92].note = Gs5_Ab5;
+          Song[92].size = quarter;
+          Song[92].tempo = 1650;
+          Song[92].space = 10;
+          Song[92].end = 0;
+
+          Song[93].note = Gs5_Ab5;
+          Song[93].size = _8th;
+          Song[93].tempo = 1650;
+          Song[93].space = 10;
+          Song[93].end = 0;
+
+          Song[94].note = E5;
+          Song[94].size = _8th;
+          Song[94].tempo = 1650;
+          Song[94].space = 10;
+          Song[94].end = 0;
+
+          Song[95].note = Fs5_Gb5;
+          Song[95].size = _8th;
+          Song[95].tempo = 1650;
+          Song[95].space = 10;
+          Song[95].end = 0;
+
+          Song[96].note = Fs5_Gb5;
+          Song[96].size = quarter;
+          Song[96].tempo = 1650;
+          Song[96].space = 10;
+          Song[96].end = 0;
+
+          Song[97].note = Gs5_Ab5;
+          Song[97].size = quarter;
+          Song[97].tempo = 1650;
+          Song[97].space = 10;
+          Song[97].end = 0;
+
+          Song[98].note = Fs5_Gb5;
+          Song[98].size = quarter;
+          Song[98].tempo = 1650;
+          Song[98].space = 10;
+          Song[98].end = 0;
+
+          Song[99].note = E5;
+          Song[99].size = _8th;
+          Song[99].tempo = 1650;
+          Song[99].space = 0;
+          Song[99].end = 0;
+
+          Song[100].note = Fs5_Gb5;
+          Song[100].size = quarter;
+          Song[100].tempo = 1650;
+          Song[100].space = 10;
+          Song[100].end = 0;
+
+          Song[101].note = Gs5_Ab5;
+          Song[101].size = _8th;
+          Song[101].tempo = 1650;
+          Song[101].space = 10;
+          Song[101].end = 0;
+
+          Song[102].note = Fs5_Gb5;
+          Song[102].size = quarter;
+          Song[102].tempo = 1650;
+          Song[102].space = 00;
+          Song[102].end = 0;
+
+          Song[103].note = Fs5_Gb5;
+          Song[103].size = _8th;
+          Song[103].tempo = 1650;
+          Song[103].space = 10;
+          Song[103].end = 0;
+
+          Song[104].note = Gs5_Ab5;
+          Song[104].size = _8th;
+          Song[104].tempo = 1650;
+          Song[104].space = 10;
+          Song[104].end = 0;
+
+          Song[105].note = Fs5_Gb5;
+          Song[105].size = quarter;
+          Song[105].tempo = 1650;
+          Song[105].space = 00;
+          Song[105].end = 0;
+
+          Song[107].note = Fs5_Gb5;
+          Song[107].size = _8th;
+          Song[107].tempo = 1650;
+          Song[107].space = 10;
+          Song[107].end = 0;
+
+          Song[108].note = Gs5_Ab5;
+          Song[108].size = _8th;
+          Song[108].tempo = 1650;
+          Song[108].space = 10;
+          Song[108].end = 0;
+
+          Song[109].note = Gs5_Ab5;
+          Song[109].size = _16th;
+          Song[109].tempo = 1650;
+          Song[109].space = 00;
+          Song[109].end = 0;
+
+          Song[110].note = Fs5_Gb5;
+          Song[110].size = _16th;
+          Song[110].tempo = 1650;
+          Song[110].space = 0;
+          Song[110].end = 0;
+
+          Song[111].note = E5;
+          Song[111].size = quarter;
+          Song[111].tempo = 1650;
+          Song[111].space = 100;
+          Song[111].end = 1;
+          //singer
+
+   Save_Note = Song[0].note;  // Needed for vibrato effect
   INDEX = 0;
 
+ /*Message_Pointer = &Message[0];
+  Save_Pointer = &Message[0];
+  Message_Length = sizeof(Message)/sizeof(Message[0]);
+  Delay_msec = 200;*/
+  Animate_On = 1;
+
+  GameState gameState = menuState;
+  GameState lastState = menuState; // track previous state
 
 
+  uint32_t adc_val;
+  uint8_t dot_digit;
+  while (1) {
+	// start ADC conversion
+	  ADC1->SQR3=1;
+	  ADC1 ->CR2 |= 1;
+	  while(!(ADC1->SR & (1<<1))){}
 
-  while (1)
-  {
-	  int i,j;
+	  adc_val = ADC1->DR;
 
-	  Message_Pointer = &Message[0];
-	  Save_Pointer = &Message[0];
-	  Message_Length = sizeof(Message)/sizeof(Message[0]);
-	  Delay_msec = 200;
-	  Animate_On = 1;
+	  int dot_index = (adc_val * (NUM_DIGITS-1)/4095);
+	  if (dot_index >= NUM_DIGITS) dot_index = NUM_DIGITS -1;
 
-
-
-	   while ((GPIOC->IDR & 1 << 10)) //when pc10 pressed
-	  {
-		 //WE COULD GIVE THE POTENIOMETER A RANGE BASICALLY IF THE POTIOMETER IS BETWEEEN THIS RANGE THEN THE DOT IS ON THIS SEGMENT THING
-		 ADC1->SQR3 = 1; //SELECTING POTENTIOMETER
-		  uint16_t POT_VALUE = ADC1->DR; //read potentiometer
-		  if(POT_VALUE >=0 && POT_VALUE < 512) {
-			  Seven_Segment(DOT);
-		  }
+	  for (int i = 0; i < NUM_DIGITS; i++){
+		  GPIOE -> ODR |= 0xFF00;
+		  uint8_t dot = (i == dot_index) ? 1 : 0;
+		  Seven_Segment_Digit(i, SPACE, dot);
+		  HAL_Delay(1);
 	  }
-	  INDEX = 0;
-	  Music_ON = 1;
+
+	/*  GPIOE->ODR = 0x0000;
+	  HAL_Delay(500);
+	  GPIOE->ODR = 0xFFFF;
+	  HAL_Delay(500);*/
+
+/*
+
+	  switch(gameState) {
+	  case menuState:
+		  if (lastState != menuState){
+			  Message_Pointer = &Message[0];
+			  Save_Pointer = &Message[0];
+			  Message_Length = sizeof(Message)/sizeof(Message[0]);
+			  Delay_msec = 200;
+			  Animate_On = 1;
+			  lastState = menuState;
+		  }
+
+		  if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10)== GPIO_PIN_RESET) {
+			  HAL_Delay(50); //debounce
+			  if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10)== GPIO_PIN_RESET){
+				  gameState = playState;
+			  }
+		  }
+		  break;
+	  case playState:
+		  if (lastState!= playState){
+		  INDEX = 0;
+		  Message_Pointer = &Message_Button[0];
+		  Save_Pointer = &Message_Button[0];
+		  MessageButtonLength = sizeof(Message_Button)/ sizeof(Message_Button[0]);
+		  Delay_msec = 200;
+		  Animate_On=1;
+		  lastState = playState;
+		  }
+		  break;
+	  }*/
 
 
-	  DIM_Enable = 1;
-	  // Green
-	  GREEN_BRT = 255;
-	  BLUE_BRT = 0;
-	  RED_BRT = 0;
-	  HAL_Delay(1000);
-
-	  // Blue
-	  GREEN_BRT = 0;
-	  BLUE_BRT = 255;
-	  RED_BRT = 0;
-	  HAL_Delay(1000);
-
-	  // Red
-	  GREEN_BRT = 0;
-	  BLUE_BRT = 0;
-	  RED_BRT = 255;
-	  HAL_Delay(1000);
-
-	  // Magenta
-	  GREEN_BRT = 0;
-	  BLUE_BRT = 255;
-	  RED_BRT = 255;
-	  HAL_Delay(1000);
-
-	  // Yellow
-	  GREEN_BRT = 255;
-	  BLUE_BRT = 0;
-	  RED_BRT = 255;
-	  HAL_Delay(1000);
-
-	  // Cyan
-	  GREEN_BRT = 255;
-	  BLUE_BRT = 255;
-	  RED_BRT = 0;
-	  HAL_Delay(1000);
-
-	  // White
-	  GREEN_BRT = 255;
-	  BLUE_BRT = 255;
-	  RED_BRT = 255;
-	  HAL_Delay(1000);
-
-	  DIM_Enable = 0;
-
-	  HAL_Delay(20000);  // Delay to allow song to finish
+	  Music_ON = 0;
+}
 
 
+	 /* USER CODE BEGIN 3 */
 
-
-    /* USER CODE BEGIN 3 */
-  }
   /* USER CODE END 3 */
 }
 
@@ -935,6 +1126,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(MEMS_INT2_GPIO_Port, &GPIO_InitStruct);
+
+
+  //
+  GPIO_InitStruct.Pin = GPIO_PIN_All;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
 }
 
