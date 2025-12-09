@@ -50,6 +50,10 @@ int NUM_DIGITS = 8;
 extern int lowestNote;
 extern int highestNote;
 extern int row;
+extern int playerLane;
+extern int score;
+extern int miss;
+int noteScored = 0;
 int note_to_row(int note) {
 	if (note==rest)return -1;
 	int range = highestNote - lowestNote;
@@ -235,7 +239,7 @@ if (Animate_On > 0)
 		Seven_Segment_Digit(1,*(Message_Pointer+6),0);
 		Seven_Segment_Digit(0,*(Message_Pointer+7),0);
 		Message_Pointer++;
-		if ((Message_Pointer - Save_Pointer) >= (Message_Length-8)) Message_Pointer = Save_Pointer;
+		if ((Message_Pointer - Save_Pointer) >= (Message_Length-5)) Message_Pointer = Save_Pointer;
 
 	}
 }
@@ -284,17 +288,31 @@ void TIM7_IRQHandler(void)
 	{
 		TONE = 0;
 	}
-	else if ((Music_ON > 0) && Song[INDEX].tempo/Song[INDEX].size == COUNT)
+	else if ((Music_ON > 0)&& (INDEX >=0) &&(INDEX< NUM_NOTES) && Song[INDEX].tempo/Song[INDEX].size == COUNT)
 	{
+		// Only score once per note
+		    if (!noteScored) {
+		        if (Song[INDEX].note != rest) {
+		            if (playerLane == row) {
+		                score++;
+		            } else {
+		                miss++;
+		            }
+		        }
+		        noteScored = 1; // mark this note processed
+		    }
+
 		COUNT = 0;
 		TONE = 0;
 		if (INDEX < NUM_NOTES -1)
 				{
 					INDEX++;
 					Save_Note = Song[INDEX].note;
+					noteScored = 0;
 				}
 		else {
 			Music_ON = 0; //end the song
+			noteScored = 1;
 		}
 	}
 	else if (Music_ON == 0)
