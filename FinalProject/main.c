@@ -41,6 +41,9 @@ int playerLane = 0;
 uint16_t POT_VALUE;
 int score;
 int row;
+int roundNum;
+int miss =0;
+int songOver = 0;
 
 /* USER CODE END PD */
 
@@ -114,9 +117,14 @@ char Message[] =
 //I THINK TO TURN THE INTEGER SCORE TO A CHARACTER, U CALL SEVEN SEGMENT DISPLAY FOR THIS MESSAGE AND THEN APPEND THE CHAR VERSION COVERED OF THE SCORE
 char GAMEOVER[] =
 		{SPACE,SPACE,SPACE,SPACE,SPACE,SPACE,SPACE,SPACE,SPACE,SPACE,
-		CHAR_G,CHAR_A,CHAR_M,CHAR_E,SPACE,CHAR_O,CHAR_V,CHAR_E,CHAR_R,SPACE,CHAR_T,CHAR_O, SPACE, SPACE,SPACE,SPACE,SPACE,SPACE,SPACE,
-		CHAR_S,CHAR_C,CHAR_O,CHAR_R,CHAR_E }; //APPEND THE SCORE TO THIS MESSAGE
+		CHAR_G,CHAR_A,CHAR_M,CHAR_E,SPACE,CHAR_O,CHAR_V,CHAR_E,CHAR_R,SPACE,SPACE,SPACE,SPACE,
+		CHAR_S,CHAR_C,CHAR_O,CHAR_R, CHAR_E,SPACE,SPACE,SPACE,SPACE }; //APPEND THE SCORE TO THIS MESSAGE
 
+/* end of round */
+char round[] = {SPACE,SPACE,SPACE,SPACE,SPACE,CHAR_R,CHAR_O, CHAR_U, CHAR_N,
+		CHAR_D, SPACE,CHAR_S,CHAR_C,CHAR_O,CHAR_R, CHAR_E,SPACE,SPACE,SPACE,SPACE};
+
+char DIGITS[10] ={ CHAR_0,CHAR_1,CHAR_2,CHAR_3,CHAR_4,CHAR_5,CHAR_6,CHAR_7,CHAR_8,CHAR_9};
 
 /* Declare array for Song */
 Music Song[100];
@@ -128,7 +136,43 @@ Music Song[100];
   * @brief  The application entry point.
   * @retval int
   */
+void scrollMessage(char *msg, int length)
+{
+    Animate_On    = 1;
+    Message_Pointer = msg;
+    Save_Pointer    = msg;
+    Message_Length  = length;
+    Delay_msec      = 20;
+}
+void writeScoreToEnd(char *msg, int length, int score) {
+	int tempscore = score;
+	int pos = length -1;
+	for (int i = 0; i< 4; i++){
+		msg[length-1-i] = SPACE;
+	}
 
+	do {
+		int digit = tempscore%10;
+		msg[pos] = DIGITS[digit];
+		tempscore/= 10;
+		pos--;
+	} while(tempscore>0 && pos >= 0);
+}
+void showRoundOverScore(int score)
+{
+    int len = sizeof(round) / sizeof(round[0]);
+    writeScoreToEnd(round, len, score);
+    scrollMessage(round, len);
+    Delay_msec = 200;
+}
+
+void showGameOverScore(int score)
+{
+    int len = sizeof(GAMEOVER) / sizeof(GAMEOVER[0]);
+    writeScoreToEnd(GAMEOVER, len, score);
+    scrollMessage(GAMEOVER, len);
+    Delay_msec = 200;
+}
 void updateDotFromPot(void) {
    	 ADC1->SQR3 = 1; //SELECTING POTENTIOMETER
    	 // turn to continuous conversion mode
@@ -142,11 +186,6 @@ void updateDotFromPot(void) {
    	 index = (NUM_DIGITS - 1)- index;
    	 playerLane = index;
    }
-void compareDotToPosition(void){
-	if (playerLane == row){
-		score++;
-	}
-}
 
    void gameDisplay(void) {
 	   int i;
@@ -178,6 +217,7 @@ void compareDotToPosition(void){
 			   Seven_Segment_Digit(i, displayBuffer[i], 0);
 		   }
 	   }
+	   //trying something
    }
    void computeSongNoteRange(void) {
 	   lowestNote = 9999;
@@ -196,7 +236,7 @@ void compareDotToPosition(void){
    	  Message_Pointer = &Message[0];
    	  Save_Pointer = &Message[0];
    	  Message_Length = sizeof(Message)/sizeof(Message[0]);
-   	  Delay_msec = 20;
+   	  Delay_msec = 200;
    }
 int main(void)
 {
@@ -381,7 +421,7 @@ int main(void)
      Song[19].end = 0;
 
      Song[20].note = B4;
-     Song[20].size = _8th;
+     Song[20].size = quarter;
      Song[20].tempo = tempo;
      Song[20].space = 10;
      Song[20].end = 0;
@@ -585,7 +625,7 @@ int main(void)
      Song[53].end = 0;
 
      Song[54].note = B4;
-     Song[54].size = _8th;
+     Song[54].size = quarter;
      Song[54].tempo = tempo;
      Song[54].space = 10;
      Song[54].end = 0;
@@ -672,19 +712,15 @@ int main(void)
       INDEX = 0;
 
     computeSongNoteRange();
+    displayStartMessage();
 
     GameState gameState = STATE_MENU;
     GameState lastState = STATE_MENU;
       while (1)
       {
+
     	  switch(gameState) {
     	  	  case STATE_MENU:
-
-    	  		 if (lastState != STATE_MENU) {
-    	  			  displayStartMessage();
-    	  			  lastState = STATE_MENU;
-    	  		 }
-
     	  		  if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10)== GPIO_PIN_RESET) {
     	  			  HAL_Delay(50); //debounce
     	  			  if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10)== GPIO_PIN_RESET){
@@ -699,17 +735,59 @@ int main(void)
     	  		  Animate_On = 0;
     	  		  Music_ON = 1;
     	  		  }
-    	  		  //if (Song[i].end ==1 ) gameState = STATE_ROUND;
-    	  		  // message saying round x score xx
+
+    	  		  if (Song[INDEX].end == 1) gameState = STATE_ROUND;
+    	  		  if (miss >= 50) {
+    	  			  Music_ON = 0;
+    	  			  gameState = STATE_OVER;
+
+    	  		  }
+
     	  		  //state moves to round but if too many misses game over
     	  		  updateDotFromPot();
     	  		  gameDisplay();
-    	  		  compareDotToPosition();
+
     	  		  break;
 
     	  	  case STATE_ROUND:
+    	  		if (lastState != STATE_ROUND) {
+    	  		        lastState = STATE_ROUND;
+    	  		        Animate_On = 1;
+    	  		        showRoundOverScore(score);   // set message pointer + scroll
+    	  		    }
 
-    	  		  }
+    	  		tempo -= 500;
+    	  		if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10)== GPIO_PIN_RESET) {
+    	  			HAL_Delay(50); //debounce
+
+    	  			if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10)== GPIO_PIN_RESET){
+    	  				tempo -= 500; // increase tempo
+    	  				miss = 0; // reset misses
+    	  				gameState = STATE_GAME;
+
+    	  			}
+    	  		    	  			  }
+    	  		  // reset misses, increase tempo -= 500
+    	  		  break;
+
+    	  	  case STATE_OVER:
+    	  		if (lastState != STATE_OVER) {
+    	  			lastState = STATE_OVER;
+    	  			Animate_On = 1;
+    	  			showGameOverScore(score);
+    	  		}
+    	  		if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10)== GPIO_PIN_RESET) {
+    	  			HAL_Delay(50); //debounce
+
+    	  			if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10)== GPIO_PIN_RESET){
+    	  				tempo = 3500; //
+    	  				score = 0;
+    	  				miss = 0; // reset misses
+    	  				gameState = STATE_MENU;
+    	  			}
+    	  			break;
+    	  		}
+    	  }
     }
 
 
