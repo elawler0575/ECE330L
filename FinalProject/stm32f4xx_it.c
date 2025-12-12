@@ -33,7 +33,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-GameState gameState = STATE_MENU;
+GameState gameState;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -43,7 +43,7 @@ GameState gameState = STATE_MENU;
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-int NUM_NOTES = 68;
+extern int NUM_NOTES;
 int digit = 0;
 volatile unsigned char displayBuffer[8] = {SPACE,SPACE,SPACE,SPACE,SPACE,SPACE,SPACE,SPACE};
 int NUM_DIGITS = 8;
@@ -54,17 +54,21 @@ extern int playerLane;
 extern int score;
 extern int miss;
 int noteScored = 0;
+extern int soundEnabled;
+extern int tempoScale;
+
 int note_to_row(int note) {
+	// function maps the note to the display
 	if (note==rest)return -1;
-	int range = highestNote - lowestNote;
+	int range = highestNote - lowestNote-1;
 	    if (range <= 0) return 0;        // avoid divide by zero
 
-	    row = (note - lowestNote) * (NUM_DIGITS - 1) / range;
+	    int r  = (note - lowestNote) * (NUM_DIGITS - 1) / range;
 
-	    if (row < 0) row = 0;
-	    if (row >= NUM_DIGITS) row = NUM_DIGITS - 1;
+	    if (r < 0) row = 0;
+	    if (r >= NUM_DIGITS) row = NUM_DIGITS - 1;
 
-	    return row;
+	    return r;
 };
 /* USER CODE END PV */
 
@@ -239,7 +243,7 @@ if (Animate_On > 0)
 		Seven_Segment_Digit(1,*(Message_Pointer+6),0);
 		Seven_Segment_Digit(0,*(Message_Pointer+7),0);
 		Message_Pointer++;
-		if ((Message_Pointer - Save_Pointer) >= (Message_Length-5)) Message_Pointer = Save_Pointer;
+		if ((Message_Pointer - Save_Pointer) >= (Message_Length)) Message_Pointer = Save_Pointer;
 
 	}
 }
@@ -266,61 +270,62 @@ if (Animate_On > 0)
 /**
   * @brief This function handles TIM7 global interrupt.
   */
+
 void TIM7_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM7_IRQn 0 */
 
-	/* Increment TONE counter and dimming ramp counter */
+	NUM_NOTES = 68;
+
 	TONE++;
 	ramp++;
 
-	/* This code plays the song from the song array structure */
-	if ((Music_ON > 0) && (Song[INDEX].note > 0) && ((Song[INDEX].tempo/Song[INDEX].size - Song[INDEX].space) > COUNT))
-	{
-
-		if (Song[INDEX].note <= TONE)
-		{
+	// the soundEnabled only plays the music if the dot is on the same display as d
+	if ((soundEnabled > 0) && (Song[INDEX].note > 0) && (((Song[INDEX].tempo)/Song[INDEX].size - Song[INDEX].space) > COUNT)) {
+		if (Song[INDEX].note <= TONE)	        {
 			GPIOD->ODR ^= 1;
 			TONE = 0;
 		}
 	}
-	else if ((Music_ON > 0) && Song[INDEX].tempo/Song[INDEX].size > COUNT)
-	{
-		TONE = 0;
-	}
-	else if ((Music_ON > 0)&& (INDEX >=0) &&(INDEX< NUM_NOTES) && Song[INDEX].tempo/Song[INDEX].size == COUNT)
-	{
+	else if ((soundEnabled > 0) && (Song[INDEX].tempo)/Song[INDEX].size > COUNT) {	}
+	if ((INDEX >= 0) && (INDEX < NUM_NOTES) && ((Song[INDEX].tempo) / Song[INDEX].size == COUNT))	    {
 		// Only score once per note
-		    if (!noteScored) {
-		        if (Song[INDEX].note != rest) {
-		            if (playerLane == row) {
-		                score++;
-		            } else {
-		                miss++;
-		            }
-		        }
-		        noteScored = 1; // mark this note processed
-		    }
-
-		COUNT = 0;
-		TONE = 0;
-		if (INDEX < NUM_NOTES -1)
-				{
-					INDEX++;
-					Save_Note = Song[INDEX].note;
-					noteScored = 0;
+		if (!noteScored) {
+			int currRow = note_to_row(Song[INDEX].note);
+			if (Song[INDEX].note != rest) {
+				if (playerLane == currRow) {
+					score++;
+					soundEnabled = 1;
 				}
-		else {
-			Music_ON = 0; //end the song
+				else {
+					miss++;
+					soundEnabled = 0;
+				}
+			} else {
+				soundEnabled = 0;
+	            }
+			noteScored = 1;
+			}
+		COUNT = 0;
+		TONE  = 0;
+		if (INDEX < NUM_NOTES - 1) {
+			INDEX++;
+			Save_Note = Song[INDEX].note;
+			noteScored = 0;
+		} else {
+			// end of song
+			Music_ON = 0;
+			soundEnabled = 0;
 			noteScored = 1;
 		}
 	}
-	else if (Music_ON == 0)
-		{
+	else {
+		if (Music_ON == 0) {
 			TONE = 0;
 			COUNT = 0;
+			soundEnabled = 0;
 		}
-
+	}
 
 	//Update 8-digit 7-segment display with d, under, etc
 	if (gameState == STATE_GAME) {
@@ -343,8 +348,6 @@ void TIM7_IRQHandler(void)
 			}
 		}
 	}
-
-
   /* USER CODE END TIM7_IRQn 0 */
   HAL_TIM_IRQHandler(&htim7);
   /* USER CODE BEGIN TIM7_IRQn 1 */
